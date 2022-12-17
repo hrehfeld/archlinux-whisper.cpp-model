@@ -13,7 +13,7 @@ I couldn't figure out how *not* to download all ~sources~ before building, and y
 :PROPERTIES:
 :ID:       e0ebf357-230f-4188-810a-24fa07812934
 :END:
-Just ~python generate.py~, go through the ~models/~ subdirectory and build/push.
+Just ~python generate.py~. This will overwrite the individual ~PKGBUILD~ files and commit them. Then just go through the ~models/~ subdirectory and build/push.
 
 E.g.:
 #+BEGIN_SRC sh
