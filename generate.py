@@ -39,6 +39,7 @@ if __name__ == '__main__':
 
     for model, checksum in models.items():
         dir = Path('models') / model
+        print(f'### Model directory: {dir}')
         if not dir.exists():
             system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model}.git {dir}')
             system(f'git -C {dir} switch -c master')
