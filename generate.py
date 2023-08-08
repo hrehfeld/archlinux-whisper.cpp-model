@@ -17,12 +17,23 @@ models = {
     'large': '0f4c8e34f21cf1a914c59d8b3ce882345ad349d6',
 }
 
+def parse_args():
+    import argparse
+    p = argparse.ArgumentParser()
+    p.add_argument('--push', action='store_true', help="Commit and then also push to each model AUR repo.")
+    p.add_argument('--push-args', help="Extra arguments when pushing to each model AUR repo.", nargs='*')
+    args = p.parse_args()
+    return args
+
+
 def system(cmd_str):
     print(cmd_str)
     return os.system(cmd_str)
 
 
 if __name__ == '__main__':
+
+    args = parse_args()
 
     src = Path('PKGBUILD.template').read_text()
 
@@ -41,3 +52,6 @@ if __name__ == '__main__':
         system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
         system(f'git -C {dir} add PKGBUILD .SRCINFO')
         system(f'git -C {dir} commit -m"chg"')
+        if args.push:
+            push_args = ' '.join(args.push_args)
+            system(f'git -C {dir} push {push_args}')
