@@ -17,6 +17,11 @@ models = {
     'large': '0f4c8e34f21cf1a914c59d8b3ce882345ad349d6',
 }
 
+def system(cmd_str):
+    print(cmd_str)
+    return os.system(cmd_str)
+
+
 if __name__ == '__main__':
 
     src = Path('PKGBUILD.template').read_text()
@@ -24,15 +29,15 @@ if __name__ == '__main__':
     for model, checksum in models.items():
         dir = Path('models') / model
         if not dir.exists():
-            os.system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model}.git {dir}')
-            os.system(f'git -C {dir} switch -c master')
-        os.system(f'git -C {dir} switch master')
+            system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model}.git {dir}')
+            system(f'git -C {dir} switch -c master')
+        system(f'git -C {dir} switch master')
 
         model_src = f'_model="{model}"' + os.linesep + f'_model_sha1sum="{checksum}"' + os.linesep + f'_pkgbase="{_pkgbase}"' + os.linesep + src
 
         pkgbuild = dir / 'PKGBUILD'
         pkgbuild.write_text(model_src)
 
-        os.system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
-        os.system(f'git -C {dir} add PKGBUILD .SRCINFO')
-        os.system(f'git -C {dir} commit -m"chg"')
+        system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
+        system(f'git -C {dir} add PKGBUILD .SRCINFO')
+        system(f'git -C {dir} commit -m"chg"')
