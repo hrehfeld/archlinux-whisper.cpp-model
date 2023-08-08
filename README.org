@@ -13,9 +13,21 @@ I couldn't figure out how *not* to download all ~sources~ before building, and y
 :PROPERTIES:
 :ID:       e0ebf357-230f-4188-810a-24fa07812934
 :END:
-Just ~python generate.py~. This will overwrite the individual ~PKGBUILD~ files and commit them. Then just go through the ~models/~ subdirectory and build/push.
 
-E.g.:
 #+BEGIN_SRC sh
-for dir in *; do makepkg -f && git -C "$dir" push origin master; done
+$ python generate.py --help
+usage: generate.py [-h] [--push] [--push-args [PUSH_ARGS ...]]
+
+options:
+  -h, --help            show this help message and exit
+  --push                Commit and then also push to each model AUR repo.
+  --push-args [PUSH_ARGS ...]
+                        Extra arguments when pushing to each model AUR repo.
 #+END_SRC
+
+
+
+Just ~python generate.py~. This will overwrite the individual ~PKGBUILD~ files and commit them. You can use --push to push to the aur repos.
+
+
+Then just go through the ~models/~ subdirectory and build models that you want.
