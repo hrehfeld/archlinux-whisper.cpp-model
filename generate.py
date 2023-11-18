@@ -14,7 +14,8 @@ models = {
     'medium': 'fd9727b6e1217c2f614f9b698455c4ffd82463b4',
     'medium.en': '8c30f0e44ce9560643ebd10bbe50cd20eafd3723',
     'large-v1': 'b1caaf735c4cc1429223d5a74f0f4d0b9b59a299',
-    'large': '0f4c8e34f21cf1a914c59d8b3ce882345ad349d6',
+    'large-v2': '0f4c8e34f21cf1a914c59d8b3ce882345ad349d6',
+    'large-v3': 'ad82bf6a9043ceed055076d0fd39f5f186ff8062',
 }
 
 def parse_args():
