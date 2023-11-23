@@ -31,4 +31,4 @@ options:
 Just ~python generate.py~. This will overwrite the individual ~PKGBUILD~ files and commit them. You can use --push to push to the aur repos.
 
 
-Then just go through the ~models/~ subdirectory and build models that you want.
+Then just go through the ~models/~ subdirectory and build models that you want -- or just install from AUR.
