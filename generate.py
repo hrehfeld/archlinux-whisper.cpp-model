@@ -55,5 +55,5 @@ if __name__ == '__main__':
         system(f'git -C {dir} add PKGBUILD .SRCINFO')
         system(f'git -C {dir} commit -m"chg"')
         if args.push:
-            push_args = ' '.join(args.push_args)
+            push_args = ' '.join(args.push_args) if args.push_args else ''
             system(f'git -C {dir} push {push_args}')
