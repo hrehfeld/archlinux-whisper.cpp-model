@@ -19,7 +19,7 @@ models = {
 }
 
 extra_variables = {
-    'large-v3': {
+    'large-v2': {
         'replaces': ['-'.join((_pkgbase, 'large'))]
     }
 }
