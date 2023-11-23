@@ -12,6 +12,7 @@ depends=()
 conflicts=()
 provides=()
 
+# copied straight from
 # https://github.com/ggerganov/whisper.cpp/blob/master/models/download-ggml-model.sh
 _url="https://huggingface.co/ggerganov/whisper.cpp"
 _pfx="blob/main"
