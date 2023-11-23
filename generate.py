@@ -18,6 +18,12 @@ models = {
     'large-v3': 'ad82bf6a9043ceed055076d0fd39f5f186ff8062',
 }
 
+extra_variables = {
+    'large-v3': {
+        'replaces': ['-'.join((_pkgbase, 'large'))]
+    }
+}
+
 def parse_args():
     import argparse
     p = argparse.ArgumentParser()
@@ -33,6 +39,14 @@ def system(cmd_str):
     return os.system(cmd_str)
 
 
+def as_shell(x):
+    if isinstance(x, list):
+        x = ' '.join((as_shell(e) for e in x))
+        return f'({x})'
+    elif isinstance(x, (int, str)):
+        return repr(x)
+    raise NotImplementedError(f'unknown value: {repr(x)}')
+
 if __name__ == '__main__':
 
     args = parse_args()
@@ -47,7 +61,15 @@ if __name__ == '__main__':
             system(f'git -C {dir} switch -c master')
         system(f'git -C {dir} switch master')
 
-        model_src = f'_model="{model}"' + os.linesep + f'_model_sha1sum="{checksum}"' + os.linesep + f'_pkgbase="{_pkgbase}"' + os.linesep + src
+        model_src = [
+            f'_model="{model}"',
+            f'_model_sha1sum="{checksum}"',
+            f'_pkgbase="{_pkgbase}"',
+            src,
+        ]
+        for k, v in extra_variables.get(model, {}).items():
+            model_src.append(f'{k}={as_shell(v)}')
+        model_src = os.linesep.join(model_src)
 
         pkgbuild = dir / 'PKGBUILD'
         pkgbuild.write_text(model_src)
