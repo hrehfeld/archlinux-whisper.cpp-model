@@ -21,7 +21,8 @@ models = {
 def parse_args():
     import argparse
     p = argparse.ArgumentParser()
-    p.add_argument('--push', action='store_true', help="Commit and then also push to each model AUR repo.")
+    p.add_argument('--commit', action='store_true', help="Commit each model AUR repo.")
+    p.add_argument('--push', action='store_true', help="Also push to each model AUR repo.")
     p.add_argument('--push-args', help="Extra arguments when pushing to each model AUR repo.", nargs='*')
     args = p.parse_args()
     return args
@@ -53,7 +54,8 @@ if __name__ == '__main__':
 
         system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
         system(f'git -C {dir} add PKGBUILD .SRCINFO')
-        system(f'git -C {dir} commit -m"chg"')
+        if args.commit:
+            system(f'git -C {dir} commit -m"chg"')
         if args.push:
             push_args = ' '.join(args.push_args) if args.push_args else ''
             system(f'git -C {dir} push {push_args}')
