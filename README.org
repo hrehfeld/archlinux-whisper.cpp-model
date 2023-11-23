@@ -15,12 +15,13 @@ I couldn't figure out how *not* to download all ~sources~ before building, and y
 :END:
 
 #+BEGIN_SRC sh
-$ python generate.py --help
-usage: generate.py [-h] [--push] [--push-args [PUSH_ARGS ...]]
+$ ./generate.py -h       
+usage: generate.py [-h] [--commit] [--push] [--push-args [PUSH_ARGS ...]]
 
 options:
   -h, --help            show this help message and exit
-  --push                Commit and then also push to each model AUR repo.
+  --commit              Commit each model AUR repo.
+  --push                Also push to each model AUR repo.
   --push-args [PUSH_ARGS ...]
                         Extra arguments when pushing to each model AUR repo.
 #+END_SRC
