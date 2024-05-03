@@ -97,7 +97,7 @@ if __name__ == '__main__':
         print(f'### Model directory: {dir}')
         if not dir.exists():
             system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model}.git {dir}')
-            system(f'git -C {dir} switch -c master')
+            system(f'git -C {dir} branch -c master')
         system(f'git -C {dir} switch master')
 
         model_src = [
