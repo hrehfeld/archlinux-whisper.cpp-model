@@ -8,6 +8,11 @@ _pkgbase = "whisper.cpp-model"
 
 model_list_filepath = 'models.json'
 
+
+def var(name, value):
+    value = as_shell(value)
+    return f'{name}={value}'
+
 extra_variables = {
     'large-v2': {
         'replaces': ['-'.join((_pkgbase, 'large'))]
@@ -96,13 +101,13 @@ if __name__ == '__main__':
         system(f'git -C {dir} switch master')
 
         model_src = [
-            f'_model="{model}"',
-            f'_model_sha1sum="{checksum}"',
-            f'_pkgbase="{_pkgbase}"',
+            var('_model', model),
+            var('_model_sha1sum', checksum),
+            var('_pkgbase', _pkgbase),
             src,
         ]
         for k, v in extra_variables.get(model, {}).items():
-            model_src.append(f'{k}={as_shell(v)}')
+            model_src.append(var(k, v))
         model_src = os.linesep.join(model_src)
 
         pkgbuild = dir / 'PKGBUILD'
