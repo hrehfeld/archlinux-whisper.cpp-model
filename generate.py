@@ -9,6 +9,8 @@ _pkgbase = "whisper.cpp-model"
 model_list_filepath = Path('models.json')
 deprecated_model_list_filepath = Path('deprecated-models.txt')
 
+def model_name(model):
+    return f'{_pkgbase}-{model}'
 
 
 def var(name, value):
@@ -17,8 +19,8 @@ def var(name, value):
 
 extra_variables = {
     'large-v2': {
-        'replaces': ['-'.join((_pkgbase, 'large'))]
-    }
+        'replaces': [model_name('large')],
+    },
 }
 
 
