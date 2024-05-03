@@ -38,7 +38,6 @@ models="(?P<models>[^"]+)''', re.MULTILINE)
     assert m, model_list
     models = m.group('models').splitlines()
 
-    print(models)
 
     models_org = load_models()
 
