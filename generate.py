@@ -104,10 +104,11 @@ if __name__ == '__main__':
             var('_model', model),
             var('_model_sha1sum', checksum),
             var('_pkgbase', _pkgbase),
-            src,
         ]
         for k, v in extra_variables.get(model, {}).items():
             model_src.append(var(k, v))
+        model_src.append(src)
+
         model_src = os.linesep.join(model_src)
 
         pkgbuild = dir / 'PKGBUILD'
