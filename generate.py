@@ -6,7 +6,7 @@ import re
 
 _pkgbase = "whisper.cpp-model"
 
-model_list_filepath = 'models.json'
+model_list_filepath = Path('models.json')
 
 
 def var(name, value):
@@ -21,7 +21,7 @@ extra_variables = {
 
 
 def load_models():
-    with open(model_list_filepath, 'r') as f:
+    with model_list_filepath.open('r') as f:
         models = json.load(f)
     return models
 
