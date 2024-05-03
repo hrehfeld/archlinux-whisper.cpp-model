@@ -7,6 +7,8 @@ import re
 _pkgbase = "whisper.cpp-model"
 
 model_list_filepath = Path('models.json')
+deprecated_model_list_filepath = Path('deprecated-models.txt')
+
 
 
 def var(name, value):
@@ -27,7 +29,7 @@ def load_models():
 
 
 def save_models(models):
-    with open(model_list_filepath, 'w') as f:
+    with model_list_filepath.open('w') as f:
         json.dump(models, f, indent=2)
 
 def update_models():
@@ -43,8 +45,17 @@ models="(?P<models>[^"]+)''', re.MULTILINE)
     assert m, model_list
     models = m.group('models').splitlines()
 
-
     models_org = load_models()
+    print(models)
+    deprecated_models = deprecated_model_list_filepath.read_text().splitlines() if deprecated_model_list_filepath.exists() else []
+    for model in models_org:
+        if model not in models:
+            print(f'Removing model {model}')
+            deprecated_models.append(model)
+            del models_org[model]
+    if deprecated_models:
+        deprecated_model_list_filepath.write_text(os.linesep.join(deprecated_models))
+
 
     for model in models:
         if model not in models_org:
