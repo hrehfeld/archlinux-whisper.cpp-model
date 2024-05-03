@@ -2,11 +2,11 @@
 from pathlib import Path
 import os
 import json
+import re
 
 _pkgbase = "whisper.cpp-model"
 
-with open('models.json', 'r') as f:
-    models = json.load(f)
+model_list_filepath = 'models.json'
 
 extra_variables = {
     'large-v2': {
@@ -14,18 +14,56 @@ extra_variables = {
     }
 }
 
+
+def load_models():
+    with open(model_list_filepath, 'r') as f:
+        models = json.load(f)
+    return models
+
+
+def save_models(models):
+    with open(model_list_filepath, 'w') as f:
+        json.dump(models, f, indent=2)
+
+def update_models():
+    model_list_url = 'https://github.com/ggerganov/whisper.cpp/raw/master/models/download-ggml-model.sh'
+    import urllib.request
+
+    response = urllib.request.urlopen(model_list_url)
+    model_list = response.read().decode('utf-8')
+
+    model_list_re = re.compile(r'''# Whisper models
+models="(?P<models>[^"]+)''', re.MULTILINE)
+    m = model_list_re.search(model_list)
+    assert m, model_list
+    models = m.group('models').splitlines()
+
+    print(models)
+
+    models_org = load_models()
+
+    for model in models:
+        if model not in models_org:
+            print(f'Adding model {model}')
+            models_org[model] = 'SKIP'
+
+
+    save_models(models_org)
+
+
 def parse_args():
     import argparse
     p = argparse.ArgumentParser()
     p.add_argument('--commit', action='store_true', help="Commit each model AUR repo.")
     p.add_argument('--push', action='store_true', help="Also push to each model AUR repo.")
     p.add_argument('--push-args', help="Extra arguments when pushing to each model AUR repo.", nargs='*')
+    p.add_argument('--update-models', action='store_true', help="Update model list.")
     args = p.parse_args()
     return args
 
 
 def system(cmd_str):
-    print(cmd_str)
+    print('system:', cmd_str)
     return os.system(cmd_str)
 
 
@@ -37,11 +75,17 @@ def as_shell(x):
         return repr(x)
     raise NotImplementedError(f'unknown value: {repr(x)}')
 
+
 if __name__ == '__main__':
 
     args = parse_args()
 
+    if args.update_models:
+        update_models()
+
     src = Path('PKGBUILD.template').read_text()
+
+    models = load_models()
 
     for model, checksum in models.items():
         dir = Path('models') / model
