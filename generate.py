@@ -57,6 +57,7 @@ def parse_args():
     p.add_argument('--push', action='store_true', help="Also push to each model AUR repo.")
     p.add_argument('--push-args', help="Extra arguments when pushing to each model AUR repo.", nargs='*')
     p.add_argument('--update-models', action='store_true', help="Update model list.")
+    p.add_argument('--makepkg', action='store_true', help="Run `makepkg -f` on each model AUR repo.")
     args = p.parse_args()
     return args
 
@@ -114,3 +115,5 @@ if __name__ == '__main__':
         if args.push:
             push_args = ' '.join(args.push_args) if args.push_args else ''
             system(f'git -C {dir} push {push_args}')
+        if args.makepkg:
+            system(f'cd {dir} && makepkg -f')
