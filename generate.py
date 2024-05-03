@@ -133,6 +133,6 @@ if __name__ == '__main__':
             system(f'git -C {dir} commit -m"chg"')
         if args.push:
             push_args = ' '.join(args.push_args) if args.push_args else ''
-            system(f'git -C {dir} push {push_args}')
+            system(f'git -C {dir} push --set-upstream origin master {push_args}')
         if args.makepkg:
             system(f'cd {dir} && makepkg -f')
