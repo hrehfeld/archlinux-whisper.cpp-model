@@ -7,7 +7,7 @@ arch=("i686" "x86_64")
 url="https://github.com/ggerganov/whisper.cpp/tree/master/models"
 license=("MIT")
 
-makedepends=()
+makedepends=("git")
 depends=()
 conflicts=()
 provides=()
