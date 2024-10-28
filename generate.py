@@ -3,11 +3,17 @@ from pathlib import Path
 import os
 import json
 import re
+import urllib.request
+import hashlib
 
 _pkgbase = "whisper.cpp-model"
 
 model_list_filepath = Path('models.json')
 deprecated_model_list_filepath = Path('deprecated-models.txt')
+
+repo_url = 'https://github.com/ggerganov/whisper.cpp'
+
+download_script_url = "https://github.com/ggerganov/whisper.cpp/raw/master/models/download-ggml-model.sh"
 
 def model_name(model):
     return f'{_pkgbase}-{model}'
@@ -23,6 +29,17 @@ extra_variables = {
     },
 }
 
+def url_basename(url):
+    return url.split('/')[-1]
+
+def download_file(url):
+    with urllib.request.urlopen(url) as response:
+        res = response.read()
+    return res
+
+def sha256sum(data: bytes):
+    return hashlib.sha256(data).hexdigest()
+
 
 def load_models():
     with model_list_filepath.open('r') as f:
@@ -35,16 +52,15 @@ def save_models(models):
         json.dump(models, f, indent=2)
 
 def update_models():
-    model_list_url = 'https://github.com/ggerganov/whisper.cpp/raw/master/models/download-ggml-model.sh'
     import urllib.request
 
-    response = urllib.request.urlopen(model_list_url)
-    model_list = response.read().decode('utf-8')
+    response = urllib.request.urlopen(download_script_url)
+    download_script_src = response.read().decode('utf-8')
 
     model_list_re = re.compile(r'''# Whisper models
 models="(?P<models>[^"]+)''', re.MULTILINE)
-    m = model_list_re.search(model_list)
-    assert m, model_list
+    m = model_list_re.search(download_script_src)
+    assert m, download_script_src
     models = m.group('models').splitlines()
 
     models_org = load_models()
@@ -76,6 +92,7 @@ def parse_args():
     p.add_argument('--push-args', help="Extra arguments when pushing to each model AUR repo.", nargs='*')
     p.add_argument('--update-models', action='store_true', help="Update model list.")
     p.add_argument('--makepkg', action='store_true', help="Run `makepkg -f` on each model AUR repo.")
+    p.add_argument('--dry-run', action='store_true', help="Do not run makepkg")
     args = p.parse_args()
     return args
 
@@ -103,6 +120,9 @@ if __name__ == '__main__':
 
     src = Path('PKGBUILD.template').read_text()
 
+    download_script_sha256sum = sha256sum(download_file(download_script_url))
+    download_script_basename = url_basename(download_script_url)
+
     models = load_models()
 
     for model, checksum in models.items():
@@ -114,9 +134,14 @@ if __name__ == '__main__':
         system(f'git -C {dir} switch master')
 
         model_src = [
+            var('_baseurl', repo_url),
             var('_model', model),
-            var('_model_sha1sum', checksum),
+            #var('_model_sha1sum', checksum),
             var('_pkgbase', _pkgbase),
+            var('_download_script_url', download_script_url),
+            var('_download_script_sha256sum', download_script_sha256sum),
+            var('_download_script_basename', download_script_basename),
+
         ]
         for k, v in extra_variables.get(model, {}).items():
             model_src.append(var(k, v))
@@ -125,14 +150,20 @@ if __name__ == '__main__':
         model_src = os.linesep.join(model_src)
 
         pkgbuild = dir / 'PKGBUILD'
+        print(f'### writing {pkgbuild}')
         pkgbuild.write_text(model_src)
 
-        system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
-        system(f'git -C {dir} add PKGBUILD .SRCINFO')
-        if args.commit:
-            system(f'git -C {dir} commit -m"chg"')
-        if args.push:
-            push_args = ' '.join(args.push_args) if args.push_args else ''
-            system(f'git -C {dir} push --set-upstream origin master {push_args}')
-        if args.makepkg:
-            system(f'cd {dir} && makepkg -f')
+        download_script_filename = dir / download_script_basename
+        if download_script_filename.exists():
+            download_script_filename.unlink()
+
+        if not args.dry_run:
+            system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
+            system(f'git -C {dir} add PKGBUILD .SRCINFO')
+            if args.commit:
+                system(f'git -C {dir} commit -m"chg"')
+            if args.push:
+                push_args = ' '.join(args.push_args) if args.push_args else ''
+                system(f'git -C {dir} push --set-upstream origin master {push_args}')
+            if args.makepkg:
+                system(f'cd {dir} && makepkg -f')
