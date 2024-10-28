@@ -6,6 +6,7 @@ import re
 import urllib.request
 import hashlib
 import dataclasses
+import subprocess
 
 _pkgbase = "whisper.cpp-model"
 
@@ -154,7 +155,7 @@ def parse_args():
 
 def system(cmd_str):
     print('system:', cmd_str)
-    return os.system(cmd_str)
+    return subprocess.check_call(cmd_str, shell=True, text=True)
 
 
 def as_shell(x):
@@ -178,6 +179,7 @@ if __name__ == '__main__':
     src = Path('PKGBUILD.template').read_text()
 
     models = load_models()
+    branch = 'master'
 
     # do_vcs = False
 
@@ -188,7 +190,10 @@ if __name__ == '__main__':
         print(f'### Model directory: {dir}')
         if not dir.exists():
             system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model_name}.git {dir}')
-            system(f'git -C {dir} branch -c master')
+            branches = subprocess.check_output(['git', '-C', dir, 'branch', '-l', '--omit-empty'], text=True).strip().splitlines()
+            branches = [branch.lstrip('* ') for branch in branches]
+            if branch not in branches:
+                system(f'git -C {dir} checkout -b master')
         system(f'git -C {dir} switch master')
 
         checksum = model.checksum(args.no_checksums) or 'SKIP'
@@ -228,9 +233,9 @@ if __name__ == '__main__':
             system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
             system(f'git -C {dir} add PKGBUILD .SRCINFO')
             if args.commit:
-                system(f'git -C {dir} commit -m"chg"')
+                subprocess.run(f'git -C {dir} commit -m"chg"', shell=True)
             if args.push:
                 push_args = ' '.join(args.push_args) if args.push_args else ''
-                system(f'git -C {dir} push --set-upstream origin master {push_args}')
+                system(f'git -C {dir} push --set-upstream origin {branch} {push_args}')
             if args.makepkg:
                 system(f'cd {dir} && makepkg -f')
