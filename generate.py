@@ -5,6 +5,7 @@ import json
 import re
 import urllib.request
 import hashlib
+import dataclasses
 
 _pkgbase = "whisper.cpp-model"
 
@@ -15,7 +16,7 @@ repo_url = 'https://github.com/ggerganov/whisper.cpp'
 
 download_script_url = "https://github.com/ggerganov/whisper.cpp/raw/master/models/download-ggml-model.sh"
 
-def model_name(model):
+def pkgname(model):
     return f'{_pkgbase}-{model}'
 
 
@@ -25,7 +26,7 @@ def var(name, value):
 
 extra_variables = {
     'large-v2': {
-        'replaces': [model_name('large')],
+        'replaces': [pkgname('large')],
     },
 }
 
@@ -41,15 +42,73 @@ def sha256sum(data: bytes):
     return hashlib.sha256(data).hexdigest()
 
 
-def load_models():
+@dataclasses.dataclass
+class Model:
+    name: str
+    version: str = '1'
+    _checksum: str | None = None
+    deprecated: bool = False
+
+    @property
+    def url(self):
+        model_name = self.name
+        # this should match the process in the original script: download_script_src
+        src="https://huggingface.co/ggerganov/whisper.cpp"
+        pfx = "resolve/main/ggml"
+        if 'tdrz' in model_name:
+            src = "https://huggingface.co/akashmjn/tinydiarize-whisper.cpp"
+            # the original script sets this again
+            pfx = "resolve/main/ggml"
+        return src + '/' + pfx + f'-{model_name}.bin'
+
+    def checksum(self, no_checksums):
+        if not no_checksums and (not self._checksum or self._checksum == 'SKIP'):
+            print(f'Downloading model {self.name} for checksum from {self.url}')
+            self._checksum = sha256sum(download_file(self.url))
+        return self._checksum
+
+
+    @staticmethod
+    def serialize_version():
+        return 2
+
+Models = dict[str, Model]
+
+def make_Models(models):
+    return {model.name: model for model in models}
+
+
+def load_models() -> Models:
     with model_list_filepath.open('r') as f:
         models = json.load(f)
+
+    version = 1
+    if isinstance(models, list):
+        assert len(models) == 2, models
+        version, models = models
+    if version >= 2:
+        assert version == 2
+        assert isinstance(models, dict), models
+        models = {name: Model(name, **args) for name, args in models.items()}
+    else:
+        models = {name: Model(name=name, _checksum=checksum) for name, checksum in models.items()}
+        save_models(models)
     return models
 
 
-def save_models(models):
+def save_models(models: Models):
+    def asdict(model):
+        ds = dataclasses.asdict(model)
+        del ds['name']
+        return ds
+
+    _models = {model.name: asdict(model) for name, model in models.items()}
+
+    data = [Model.serialize_version(), _models]
+
     with model_list_filepath.open('w') as f:
-        json.dump(models, f, indent=2)
+        json.dump(data, f, indent=2)
+
 
 def update_models():
     import urllib.request
@@ -61,24 +120,19 @@ def update_models():
 models="(?P<models>[^"]+)''', re.MULTILINE)
     m = model_list_re.search(download_script_src)
     assert m, download_script_src
-    models = m.group('models').splitlines()
+    updated_model_names = m.group('models').splitlines()
 
     models_org = load_models()
-    print(models)
-    deprecated_models = deprecated_model_list_filepath.read_text().splitlines() if deprecated_model_list_filepath.exists() else []
-    for model in models_org:
-        if model not in models:
-            print(f'Removing model {model}')
-            deprecated_models.append(model)
-            del models_org[model]
-    if deprecated_models:
-        deprecated_model_list_filepath.write_text(os.linesep.join(deprecated_models))
 
+    for model_name, model in models_org.items():
+        if model_name not in updated_model_names:
+            print(f'Deprecating model {model_name}')
+            model.deprecated = True
 
-    for model in models:
-        if model not in models_org:
-            print(f'Adding model {model}')
-            models_org[model] = 'SKIP'
+    for model_name in updated_model_names:
+        if model_name not in models_org:
+            print(f'Adding model {model_name}')
+            models_org[model_name] = Model(name=model_name)
 
 
     save_models(models_org)
@@ -93,6 +147,7 @@ def parse_args():
     p.add_argument('--update-models', action='store_true', help="Update model list.")
     p.add_argument('--makepkg', action='store_true', help="Run `makepkg -f` on each model AUR repo.")
     p.add_argument('--dry-run', action='store_true', help="Do not run makepkg")
+    p.add_argument('--no-checksums', action='store_true', help="Do not retrieve model files for checksums")
     args = p.parse_args()
     return args
 
@@ -108,6 +163,8 @@ def as_shell(x):
         return f'({x})'
     elif isinstance(x, (int, str)):
         return repr(x)
+    elif isinstance(x, Path):
+        return repr(str(x))
     raise NotImplementedError(f'unknown value: {repr(x)}')
 
 
@@ -120,31 +177,46 @@ if __name__ == '__main__':
 
     src = Path('PKGBUILD.template').read_text()
 
-    download_script_sha256sum = sha256sum(download_file(download_script_url))
-    download_script_basename = url_basename(download_script_url)
-
     models = load_models()
 
-    for model, checksum in models.items():
-        dir = Path('models') / model
+    # do_vcs = False
+
+    for model_name, model in models.items():
+        model_filepath = Path(f"ggml-{model_name}.bin")
+
+        dir = Path('models') / model_name
         print(f'### Model directory: {dir}')
         if not dir.exists():
-            system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model}.git {dir}')
+            system(f'git clone ssh://aur@aur.archlinux.org/whisper.cpp-model-{model_name}.git {dir}')
             system(f'git -C {dir} branch -c master')
         system(f'git -C {dir} switch master')
 
+        checksum = model.checksum(args.no_checksums) or 'SKIP'
+        if not args.no_checksums:
+            # save the updated checksum
+            save_models(models)
+
         model_src = [
             var('_baseurl', repo_url),
-            var('_model', model),
-            #var('_model_sha1sum', checksum),
+            var('_model', model_name),
+            var('_model_url', (model.url)),
+            var('_model_sha1sum', checksum),
             var('_pkgbase', _pkgbase),
-            var('_download_script_url', download_script_url),
-            var('_download_script_sha256sum', download_script_sha256sum),
-            var('_download_script_basename', download_script_basename),
+            #var('_download_script_url', download_script_url),
+            #var('_download_script_basename', download_script_basename),
 
         ]
-        for k, v in extra_variables.get(model, {}).items():
+        for k, v in extra_variables.get(model_name, {}).items():
             model_src.append(var(k, v))
+#         if do_vcs:
+#             model_src.append("""pkgver() {
+#     # track whisper.cpp release tags
+#     latest_release=$(git ls-remote -t "$_baseurl" | cut -f 2 | sed 's#^refs/tags/v\?##' | sort -r | head -n1 | cut -d '/' -f 3 )
+#     latest_commit="$(git ls-remote "$_baseurl" master | head -n1 | cut -f 1 | cut -b -12)"
+#     echo "$latest_release.r$latest_commit"
+# }
+
+# """)
         model_src.append(src)
 
         model_src = os.linesep.join(model_src)
@@ -152,10 +224,6 @@ if __name__ == '__main__':
         pkgbuild = dir / 'PKGBUILD'
         print(f'### writing {pkgbuild}')
         pkgbuild.write_text(model_src)
-
-        download_script_filename = dir / download_script_basename
-        if download_script_filename.exists():
-            download_script_filename.unlink()
 
         if not args.dry_run:
             system(f'cd {dir} && makepkg --printsrcinfo > .SRCINFO')
