@@ -204,7 +204,7 @@ if __name__ == '__main__':
         model_src = [
             var('_baseurl', repo_url),
             var('_model', model_name),
-            var('_model_sha1sum', checksum),
+            var('_model_sha256sum', checksum),
             var('_pkgbase', _pkgbase),
             #var('_download_script_url', download_script_url),
             #var('_download_script_basename', download_script_basename),
